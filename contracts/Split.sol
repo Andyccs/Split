@@ -119,8 +119,16 @@ contract Split {
         return nextProposalIndex++;
     }
 
+    /**
+     * @dev Payer sends the required amount to a specific SplitProposal (as indicated by
+     * "proposalNumber" input argument). If payer is not a valid payer, not sending enough amount,
+     * or already paid for the SplitProposal, the transaction is reverted. Any extra amount that are
+     * sent by payer is not refundable, and are considered tips for the contract owner.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
     function sendAmount(uint256 proposalNumber) public payable {
-        require(validProposals[proposalNumber], "Invalid proposalNumber in msg.data");
+        require(validProposals[proposalNumber], "Invalid proposalNumber");
 
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.completed == false, "The proposal is already completed");
@@ -135,6 +143,13 @@ contract Split {
         claimableTips = msg.value - proposal.amountsByAddress[msg.sender];
     }
 
+    /**
+     * @dev Payer withdraws the amount that they already paid for the SplitProposal. This method can
+     * only be called before the SpitProposal is marked as completed. If payer is not a valid payer
+     * or not already paid for the SplitProposal, the transaction is reverted.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
     function withdrawAmount(uint256 proposalNumber) public payable {
         require(validProposals[proposalNumber], "Invalid proposalNumber in msg.data");
 
@@ -148,10 +163,19 @@ contract Split {
         proposals[proposalNumber].paidByAddress[msg.sender] = false;
     }
 
+    /**
+     * @dev Payer or receiver call this method to send all the amounts that are already paid by
+     * all the payers to the receiver. All payers must have made required payment, before this
+     * method can be executed successfully.
+     */
     function sendToReceiver(uint256 proposalNumber) public payable {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
 
         SplitProposal storage proposal = proposals[proposalNumber];
+        require(
+            proposal.isPayer[msg.sender] || proposal.receiver == msg.sender,
+            "msg.sender is not a valid payer or a receiver for the given proposal"
+        );
         require(proposal.completed == false, "The proposal is already completed");
         for (uint256 i = 0; i < proposal.payers.length; i++) {
             require(
@@ -165,6 +189,9 @@ contract Split {
         proposal.completed = true;
     }
 
+    /**
+     * @dev Owner calls this method to withdraw tips given by the payers.
+     */
     function withdrawTips() public payable {
         require(msg.sender == owner, "Not the owner");
         require(claimableTips != 0, "No tips for now");
@@ -174,20 +201,52 @@ contract Split {
         claimableTips = 0;
     }
 
+    /**
+     * @dev Whether the given proposalNumber contains a valid SplitProposal
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
     function isValidProposals(uint256 proposalNumber) public view returns (bool) {
         return validProposals[proposalNumber];
     }
 
+    /**
+     * @dev Whether the given proposalNumber contains a completed SplitProposal
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
+    function isCompleted(uint256 proposalNumber) public view returns (bool) {
+        require(validProposals[proposalNumber], "Invalid proposalNumber");
+        return proposals[proposalNumber].completed;
+    }
+
+    /**
+     * @dev Returns a list of payers for the given proposalNumber.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
     function getPayers(uint256 proposalNumber) public view returns (address[] memory) {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
         return proposals[proposalNumber].payers;
     }
 
+    /**
+     * @dev Returns a list of amounts that are required to be paid by each payer for the given
+     * proposalNumber.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
     function getAmounts(uint256 proposalNumber) public view returns (uint256[] memory) {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
         return proposals[proposalNumber].amounts;
     }
 
+    /**
+     * @dev Returns the amount that is required to be paid by payer in a given SplitProposal.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     * @param payer The payer address
+     */
     function getAmountForPayer(
         uint256 proposalNumber,
         address payer
@@ -203,11 +262,23 @@ contract Split {
         return proposal.amountsByAddress[payer];
     }
 
+    /**
+     * @dev Whether a given payer address is a valid payer in a given SplitProposal.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     * @param payer The payer address
+     */
     function isPayer(uint256 proposalNumber, address payer) public view returns (bool) {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
         return proposals[proposalNumber].isPayer[payer];
     }
 
+    /**
+     * @dev Whether a given payer address has paid for a given SplitProposal.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     * @param payer The payer address
+     */
     function isPaidForPayer(uint256 proposalNumber, address payer) public view returns (bool) {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
 
