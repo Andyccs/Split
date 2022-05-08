@@ -12,15 +12,13 @@ async function createSplitContract() {
 }
 
 async function createSplitProposal(splitContract, payers, receiver) {
-  const expectedSplitProposalNumber = ethers.BigNumber.from(0);
-
   const accounts = await ethers.getSigners();
   const amounts = [1];
 
   const results = await splitContract.createSplitProposal(payers, amounts, receiver);
-  expect(results.value).to.equal(expectedSplitProposalNumber);
+  expect(results.value).to.equal(0);
   return {
-    'proposalNumber': expectedSplitProposalNumber,
+    'proposalNumber': results.value,
     'amount': amounts[0]
   };
 }
@@ -33,15 +31,13 @@ describe("Split.createSplitProposal", function () {
   it("Should createSplitProposal successfully", async function () {
     let split = await createSplitContract();
 
-    const expectedSplitProposalNumber = ethers.BigNumber.from(0);
-
     const accounts = await ethers.getSigners();
     const payers = [accounts[0].address];
     const amounts = [1];
     const receiver = accounts[1].address;
 
     const results = await split.createSplitProposal(payers, amounts, receiver);
-    expect(results.value).to.equal(expectedSplitProposalNumber);
+    expect(results.value).to.equal(0);
   });
 
   it("Should not createSplitProposal if payers is empty", async function () {
@@ -108,7 +104,11 @@ describe("Split.sendAmount", () => {
   it("Should sendAmount successfully by payer", async function () {
     const { proposalNumber, amount } =
         await createSplitProposal(split, [payerAddress.address], receiverAddress.address);
-        console.log(proposalNumber);
-    await split.connect(payerAddress).sendAmount(proposalNumber, { value: amount });
+    await expect(await split.connect(payerAddress).sendAmount(proposalNumber, { value: amount }))
+      .to.changeEtherBalances(
+        [payerAddress, receiverAddress, split],
+        [-1, 0, 1]
+      );
   });
-})
+
+});
