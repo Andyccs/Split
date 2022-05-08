@@ -74,6 +74,7 @@ contract Split is Ownable {
     // considered tips for the owner.
     uint256 claimableTips;
 
+    // Whether the given proposalNumber is valid.
     modifier validProposalNumber(uint256 proposalNumber) {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
         _;
