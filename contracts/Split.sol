@@ -14,6 +14,8 @@ pragma solidity >=0.7.0 <0.9.0;
  */
 contract Split {
 
+    address constant public nullAddress = 0x0000000000000000000000000000000000000000;
+
     // SplitProposal contains an array of payers and the amounts that are required to by paid by
     // each payer, before the total amount is sent to the receiver.
     struct SplitProposal {
@@ -95,10 +97,12 @@ contract Split {
         public
         returns (uint256)
     {
+        require(payers.length != 0, "No payer address is provided");
         require(
             payers.length == amounts.length,
             "The length of payers and amounts must be the same"
         );
+        require(receiver != nullAddress, "Receiver address should not be 0x0");
         require(validProposals[nextProposalIndex] == false, "nextProposalIndex is already used");
 
         validProposals[nextProposalIndex] = true;
