@@ -64,15 +64,15 @@ contract Split is Ownable {
     mapping (uint256 => SplitProposal) private proposals;
 
     // All valid SplitProposals
-    mapping (uint256 => bool) private validProposals;
+    mapping (uint256 => bool) public validProposals;
 
     // The next proposal index that is going to be used in createSplitProposal()
-    uint256 nextProposalIndex;
+    uint256 public nextProposalIndex;
 
     // Any tips that can be claimed by the owner. Extra amounts that are sent by payers using
     // sendAmount() to this contract are tracked by this variable, and these extra amounts are
     // considered tips for the owner.
-    uint256 claimableTips;
+    uint256 public claimableTips;
 
     // Whether the given proposalNumber is valid.
     modifier validProposalNumber(uint256 proposalNumber) {
@@ -152,7 +152,6 @@ contract Split is Ownable {
         );
 
         proposals[proposalNumber].paidByAddress[msg.sender] = true;
-        claimableTips = msg.value - proposal.amountsByAddress[msg.sender];
     }
 
     /**

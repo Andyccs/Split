@@ -109,6 +109,67 @@ describe("Split.sendAmount", () => {
         [payerAddress, receiverAddress, split],
         [-1, 0, 1]
       );
+
+    expect(await split.isPaidForPayer(proposalNumber, payerAddress.address))
+      .to.be.true;
+    expect(await split.claimableTips()).to.equal(0);
+  });
+
+  it("Should not sendAmount with invalid proposalNumber", async function () {
+    const { _, amount } =
+        await createSplitProposal(split, [payerAddress.address], receiverAddress.address);
+    await expect(
+        split
+          .connect(payerAddress)
+          .sendAmount(ethers.BigNumber.from(1), { value: amount }))
+      .to.be.reverted;
+  });
+
+  it("Should not sendAmount with completed proposal", async function () {
+    const { proposalNumber, amount } =
+        await createSplitProposal(split, [payerAddress.address], receiverAddress.address);
+    await expect(await split.connect(payerAddress).sendAmount(proposalNumber, { value: amount }))
+      .to.changeEtherBalances(
+        [payerAddress, receiverAddress, split],
+        [-1, 0, 1]
+      );
+    await expect(await split.connect(receiverAddress).sendToReceiver(proposalNumber))
+      .to.changeEtherBalances(
+        [payerAddress, receiverAddress, split],
+        [0, 1, -1]
+      );
+
+    await expect(split.connect(payerAddress).sendAmount(proposalNumber, { value: amount }))
+      .to.be.reverted;
+  });
+
+  it("Should not sendAmount if sender is not a valid payer", async function () {
+    const { proposalNumber, amount } =
+        await createSplitProposal(split, [payerAddress.address], receiverAddress.address);
+    await expect(split.connect(receiverAddress).sendAmount(proposalNumber, { value: amount }))
+      .to.be.reverted
+  });
+
+  it("Should not sendAmount if sender has already paid", async function () {
+    const { proposalNumber, amount } =
+        await createSplitProposal(split, [payerAddress.address], receiverAddress.address);
+    await expect(await split.connect(payerAddress).sendAmount(proposalNumber, { value: amount }))
+      .to.changeEtherBalances(
+        [payerAddress, receiverAddress, split],
+        [-1, 0, 1]
+      );
+    await expect(split.connect(payerAddress).sendAmount(proposalNumber, { value: amount }))
+      .to.be.reverted
+  });
+
+  it("Should not sendAmount if sender sends invalid amount", async function () {
+    const { proposalNumber, amount } =
+        await createSplitProposal(split, [payerAddress.address], receiverAddress.address);
+    await expect(
+        split
+          .connect(payerAddress)
+          .sendAmount(proposalNumber, { value: ethers.BigNumber.from(123) }))
+      .to.be.reverted
   });
 
 });
