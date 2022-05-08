@@ -16,6 +16,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
 contract Split is Ownable {
+
     // SplitProposal contains an array of payers and the amounts that are required to by paid by
     // each payer, before the total amount is sent to the receiver.
     struct SplitProposal {
@@ -142,7 +143,7 @@ contract Split is Ownable {
         require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
         require(proposal.paidByAddress[msg.sender] == false, "Sender has already paid");
         require(
-            msg.value >= proposal.amountsByAddress[msg.sender],
+            msg.value == proposal.amountsByAddress[msg.sender],
             "Invalid amount that is required for this address"
         );
 
