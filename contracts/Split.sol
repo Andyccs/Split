@@ -16,9 +16,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
 contract Split is Ownable {
-
-    address constant public nullAddress = 0x0000000000000000000000000000000000000000;
-
     // SplitProposal contains an array of payers and the amounts that are required to by paid by
     // each payer, before the total amount is sent to the receiver.
     struct SplitProposal {
@@ -107,7 +104,7 @@ contract Split is Ownable {
             payers.length == amounts.length,
             "The length of payers and amounts must be the same"
         );
-        require(receiver != nullAddress, "Receiver address should not be 0x0");
+        require(receiver != address(0), "Receiver address should not be 0x0");
         require(validProposals[nextProposalIndex] == false, "nextProposalIndex is already used");
 
         validProposals[nextProposalIndex] = true;
@@ -117,6 +114,7 @@ contract Split is Ownable {
         proposal.receiver = receiver;
 
         for (uint256 i = 0; i < payers.length; i++) {
+            require(payers[i] != address(0), "payer account is the zero address");
             require(
                 proposal.isPayer[payers[i]] == false,
                 "A payer exist more than once in payers input argument"
