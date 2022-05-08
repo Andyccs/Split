@@ -74,6 +74,11 @@ contract Split is Ownable {
     // considered tips for the owner.
     uint256 claimableTips;
 
+    modifier validProposalNumber(uint256 proposalNumber) {
+        require(validProposals[proposalNumber], "Invalid proposalNumber");
+        _;
+    }
+
     constructor() Ownable() {
     }
 
@@ -135,9 +140,7 @@ contract Split is Ownable {
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
-    function sendAmount(uint256 proposalNumber) public payable {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
-
+    function sendAmount(uint256 proposalNumber) public payable validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.completed == false, "The proposal is already completed");
         require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
@@ -158,9 +161,13 @@ contract Split is Ownable {
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
-    function withdrawAmount(uint256 proposalNumber) public payable {
-        require(validProposals[proposalNumber], "Invalid proposalNumber in msg.data");
-
+    function withdrawAmount(
+        uint256 proposalNumber
+    )
+        public
+        payable
+        validProposalNumber(proposalNumber)
+    {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.completed == false, "The proposal is already completed");
         require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
@@ -176,9 +183,7 @@ contract Split is Ownable {
      * all the payers to the receiver. All payers must have made required payment, before this
      * method can be executed successfully.
      */
-    function sendToReceiver(uint256 proposalNumber) public {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
-
+    function sendToReceiver(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(
             proposal.isPayer[msg.sender] || proposal.receiver == msg.sender,
@@ -222,8 +227,14 @@ contract Split is Ownable {
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
-    function isCompleted(uint256 proposalNumber) public view returns (bool) {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
+    function isCompleted(
+        uint256 proposalNumber
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (bool)
+    {
         return proposals[proposalNumber].completed;
     }
 
@@ -232,8 +243,14 @@ contract Split is Ownable {
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
-    function getPayers(uint256 proposalNumber) public view returns (address[] memory) {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
+    function getPayers(
+        uint256 proposalNumber
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (address[] memory)
+    {
         return proposals[proposalNumber].payers;
     }
 
@@ -243,8 +260,14 @@ contract Split is Ownable {
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
-    function getAmounts(uint256 proposalNumber) public view returns (uint256[] memory) {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
+    function getAmounts(
+        uint256 proposalNumber
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (uint256[] memory)
+    {
         return proposals[proposalNumber].amounts;
     }
 
@@ -260,10 +283,9 @@ contract Split is Ownable {
     )
         public
         view
+        validProposalNumber(proposalNumber)
         returns (uint256)
     {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
-
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.isPayer[payer], "Invalid payer for the proposalNumber");
         return proposal.amountsByAddress[payer];
@@ -275,8 +297,15 @@ contract Split is Ownable {
      * new SplitProposal using createSplitProposal.
      * @param payer The payer address
      */
-    function isPayer(uint256 proposalNumber, address payer) public view returns (bool) {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
+    function isPayer(
+        uint256 proposalNumber,
+        address payer
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (bool)
+    {
         return proposals[proposalNumber].isPayer[payer];
     }
 
@@ -286,9 +315,15 @@ contract Split is Ownable {
      * new SplitProposal using createSplitProposal.
      * @param payer The payer address
      */
-    function isPaidForPayer(uint256 proposalNumber, address payer) public view returns (bool) {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
-
+    function isPaidForPayer(
+        uint256 proposalNumber,
+        address payer
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (bool)
+    {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.isPayer[payer], "Invalid payer for the proposalNumber");
         return proposal.paidByAddress[payer];
