@@ -2,6 +2,9 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+
 /**
  * @title Split
  * @dev Split contract allows users to create SplitProposal. A SplitProposal contains an array of
@@ -12,7 +15,7 @@ pragma solidity >=0.7.0 <0.9.0;
  * withdrawAmount() to withdraw the amount that payer has already paid for the SplitProposal.
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
-contract Split {
+contract Split is Ownable {
 
     address constant public nullAddress = 0x0000000000000000000000000000000000000000;
 
@@ -73,15 +76,17 @@ contract Split {
     // considered tips for the owner.
     uint256 claimableTips;
 
-    // Owner of this contract.
-    address owner;
-
-    constructor() {
-        owner = msg.sender;
+    constructor() Ownable() {
     }
 
-    // Function to receive Ether. msg.data must be empty
-    receive() external payable {}
+    // Function to receive Ether.
+    receive() external payable {
+        claimableTips += msg.value;
+    }
+
+    fallback() external payable {
+        claimableTips += msg.value;
+    }
 
     /**
      * @dev Creates a SplitProposal
@@ -162,9 +167,9 @@ contract Split {
         require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
         require(proposal.paidByAddress[msg.sender], "Sender has not paid yet");
 
-        (bool sent, ) = msg.sender.call{value: proposal.amountsByAddress[msg.sender]}("");
-        require(sent, "Failed to send Ether");
+        // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         proposals[proposalNumber].paidByAddress[msg.sender] = false;
+        Address.sendValue(payable(msg.sender), proposal.amountsByAddress[msg.sender]);
     }
 
     /**
@@ -172,7 +177,7 @@ contract Split {
      * all the payers to the receiver. All payers must have made required payment, before this
      * method can be executed successfully.
      */
-    function sendToReceiver(uint256 proposalNumber) public payable {
+    function sendToReceiver(uint256 proposalNumber) public {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
 
         SplitProposal storage proposal = proposals[proposalNumber];
@@ -188,21 +193,20 @@ contract Split {
             );
         }
 
-        (bool sent, ) = proposal.receiver.call{value: proposal.totalAmount}("");
-        require(sent, "Failed to send Ether");
+        // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         proposal.completed = true;
+        Address.sendValue(payable(proposal.receiver), proposal.totalAmount);
     }
 
     /**
      * @dev Owner calls this method to withdraw tips given by the payers.
      */
-    function withdrawTips() public payable {
-        require(msg.sender == owner, "Not the owner");
+    function withdrawTips() public onlyOwner {
         require(claimableTips != 0, "No tips for now");
 
-        (bool sent, ) = msg.sender.call{value: claimableTips}("");
-        require(sent, "Failed to send Ether");
+        // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         claimableTips = 0;
+        Address.sendValue(payable(msg.sender), claimableTips);
     }
 
     /**
