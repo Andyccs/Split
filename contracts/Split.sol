@@ -207,8 +207,9 @@ contract Split is Ownable {
         require(claimableTips != 0, "No tips for now");
 
         // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
+        uint256 toBeClaimedTips = claimableTips;
         claimableTips = 0;
-        Address.sendValue(payable(msg.sender), claimableTips);
+        Address.sendValue(payable(msg.sender), toBeClaimedTips);
     }
 
     /**

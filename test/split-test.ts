@@ -345,3 +345,64 @@ describe('Split.sendToReceiver', () => {
     ).to.be.reverted;
   });
 });
+
+describe('Split.sendToReceiver', () => {
+  let split: Split;
+  let ownerSigner: SignerWithAddress;
+  let payerSigner: SignerWithAddress;
+  let receiverSigner: SignerWithAddress;
+
+  beforeEach(async () => {
+    split = await createSplitContract();
+    [ownerSigner, payerSigner, receiverSigner] = await ethers.getSigners();
+  });
+
+  it('Should withdrawTips successfully', async () => {
+    const tipsAmount = ethers.BigNumber.from(123);
+    await expect(
+      await payerSigner.sendTransaction({
+        to: split.address,
+        value: tipsAmount,
+      })
+    ).to.changeEtherBalances(
+      [ownerSigner, payerSigner, receiverSigner, split],
+      [0, -tipsAmount, 0, tipsAmount]
+    );
+
+    await expect(await split.connect(ownerSigner).claimableTips()).to.equal(
+      tipsAmount
+    );
+
+    await expect(
+      await split.connect(ownerSigner).withdrawTips()
+    ).to.changeEtherBalances(
+      [ownerSigner, payerSigner, receiverSigner, split],
+      [tipsAmount, 0, 0, -tipsAmount]
+    );
+
+    await expect(await split.connect(ownerSigner).claimableTips()).to.equal(0);
+  });
+
+  it('Should not withdrawTips if not owner', async () => {
+    const tipsAmount = ethers.BigNumber.from(123);
+    await expect(
+      await payerSigner.sendTransaction({
+        to: split.address,
+        value: tipsAmount,
+      })
+    ).to.changeEtherBalances(
+      [ownerSigner, payerSigner, receiverSigner, split],
+      [0, -tipsAmount, 0, tipsAmount]
+    );
+
+    await expect(await split.connect(ownerSigner).claimableTips()).to.equal(
+      tipsAmount
+    );
+
+    await expect(split.connect(payerSigner).withdrawTips()).to.be.reverted;
+  });
+
+  it('Should not withdrawTips if no tips', async () => {
+    await expect(split.connect(ownerSigner).withdrawTips()).to.be.reverted;
+  });
+});
