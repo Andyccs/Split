@@ -78,7 +78,8 @@ contract Split is Ownable {
 
         // Whether this SplitProposal has completed. This field is set to true by sendToReceiver()
         // if the method completed successfully. Once a SplitProposal is completed, it is no longer
-        // possible to interact with the SplitProposal.
+        // possible for payer to interact with the SplitProposal, and receiver can start withdraw
+        // amounts from this SplitProposal.
         bool completed;
     }
 
