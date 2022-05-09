@@ -28,26 +28,43 @@ contract Split is Ownable {
         // payerAmounts is a list of amounts that need to be paid by each payer, i.e. payers[i]
         // should pay payerAmounts[i] for all i < payerAmounts.length, before a SplitProposal can be
         // marked as completed. payerAmounts is one of the input arguments of createSplitProposal()
-        // payerAmountsmethod.
+        // method.
         uint256[] payerAmounts;
 
-        // receiver is the receiver address for all the amounts that are paid by payers. Note that
-        // there is no restriction on who is the receiver, and it is possible for a receiver to be
-        // one of the payer.
-        address receiver;
+        // receivers is a list of receiver addresses to receive the specified amount (as indicated
+        // by the "receiverAmounts" variable below) after a SplitProposal is marked as completed.
+        // Note that there is no restriction on who is the receiver, and it is possible for a
+        // receiver to be one of the payer.
+        address[] receivers;
+
+        // receiverAmounts is a list of amounts that need to be paid to each receiver, i.e.
+        // receivers[i] should receive receiverAmounts[i] for all i < receiverAmounts.length, when a
+        // SplitProposal is marked as completed. receiverAmounts is one of the input arguments of
+        // createSplitProposal() method.
+        uint256[] receiverAmounts;
 
         // isPayer is an index of whether a given payer address is a valid payer for a
         // SplitProposal. This index is created during createSplitProposal() and should never be
         // changed after that.
         mapping(address => bool) isPayer;
 
-        // amountsByAddress is an index of payer address to the amount that is required to be paid
-        // by the payer. This index is created during createSplitProposal() and should never be
+        // isReceiver is an index of whether a given receiver address is a valid receiver for a
+        // SplitProposal. This index is created during createSplitProposal() and should never be
         // changed after that.
-        mapping(address => uint256) amountsByAddress;
+        mapping(address => bool) isReceiver;
 
-        // totalAmount is the sum of "payerAmounts". This value is created during
-        // createSplitProposal() and should never be changed after that.
+        // payerAmountsByAddress is an index of payer address to the amount that is required to be
+        // paid by the payer. This index is created during createSplitProposal() and should never be
+        // changed after that.
+        mapping(address => uint256) payerAmountsByAddress;
+
+        // receiverAmountsByAddress is an index of receiver address to the amount that is required
+        // to be paid to the receiver. This index is created during createSplitProposal() and should
+        // never be changed after that.
+        mapping(address => uint256) receiverAmountsByAddress;
+
+        // totalAmount is the sum of "payerAmounts" or the sum of "receiverAmounts". This value is
+        // created during createSplitProposal() and should never be changed after that.
         uint256 totalAmount;
 
         // paidByAddress tracks whether a payer address has already made the required payment. The
@@ -97,42 +114,67 @@ contract Split is Ownable {
     /**
      * @dev Creates a SplitProposal
      * @param payers An array of payers that need to pay the given amounts
-     * @param amounts An array of amounts that needs to be paid by each payer
-     * @param receiver The receiver of this SplitProposal once it is completed
+     * @param payerAmounts An array of amounts that needs to be paid by each payer
+     * @param receivers An array of receivers to be paid
+     * @param receiverAmounts An array of amounts to be received by each receiver
      * @return The SplitProposal number
      */
     function createSplitProposal(
         address[] memory payers,
-        uint256[] memory amounts,
-        address receiver
+        uint256[] memory payerAmounts,
+        address[] memory receivers,
+        uint256[] memory receiverAmounts
     )
         public
         returns (uint256)
     {
         require(payers.length != 0, "No payer address is provided");
         require(
-            payers.length == amounts.length,
-            "The length of payers and amounts must be the same"
+            payers.length == payerAmounts.length,
+            "The length of payers and payerAmounts must be the same"
         );
-        require(receiver != address(0), "Receiver address should not be 0x0");
+        require(
+            receivers.length == receiverAmounts.length,
+            "The length of receivers and receiverAmounts must be the same"
+        );
+        require(
+            payers.length == receivers.length,
+            "The length of payers and receivers must be the same"
+        );
         require(validProposals[nextProposalIndex] == false, "nextProposalIndex is already used");
 
         validProposals[nextProposalIndex] = true;
         SplitProposal storage proposal = proposals[nextProposalIndex];
         proposal.payers = payers;
-        proposal.payerAmounts = amounts;
-        proposal.receiver = receiver;
+        proposal.payerAmounts = payerAmounts;
+        proposal.receivers = receivers;
+        proposal.receiverAmounts = receiverAmounts;
 
+        uint256 totalPayerAmounts;
+        uint256 totalReceiverAmounts;
         for (uint256 i = 0; i < payers.length; i++) {
             require(payers[i] != address(0), "payer account is the zero address");
+            require(receivers[i] != address(0), "receiver account is the zero address");
             require(
                 proposal.isPayer[payers[i]] == false,
                 "A payer exist more than once in payers input argument"
             );
+            require(
+                proposal.isReceiver[receivers[i]] == false,
+                "A receiver exist more than once in receivers input argument"
+            );
             proposal.isPayer[payers[i]] = true;
-            proposal.amountsByAddress[payers[i]] = amounts[i];
-            proposal.totalAmount += amounts[i];
+            proposal.isReceiver[receivers[i]] = true;
+            proposal.payerAmountsByAddress[payers[i]] = payerAmounts[i];
+            proposal.receiverAmountsByAddress[receivers[i]] = receiverAmounts[i];
+            totalPayerAmounts += payerAmounts[i];
+            totalReceiverAmounts += receiverAmounts[i];
         }
+        require(
+            totalPayerAmounts == totalReceiverAmounts,
+            "sum(payerAmounts) != sum(receiverAmounts)"
+        );
+        proposal.totalAmount = totalPayerAmounts;
         return nextProposalIndex++;
     }
 
@@ -149,7 +191,7 @@ contract Split is Ownable {
         require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
         require(proposal.paidByAddress[msg.sender] == false, "Sender has already paid");
         require(
-            msg.value == proposal.amountsByAddress[msg.sender],
+            msg.value == proposal.payerAmountsByAddress[msg.sender],
             "Invalid amount that is required for this address"
         );
 
@@ -176,7 +218,7 @@ contract Split is Ownable {
 
         // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         proposals[proposalNumber].paidByAddress[msg.sender] = false;
-        Address.sendValue(payable(msg.sender), proposal.amountsByAddress[msg.sender]);
+        Address.sendValue(payable(msg.sender), proposal.payerAmountsByAddress[msg.sender]);
     }
 
     /**
@@ -187,7 +229,7 @@ contract Split is Ownable {
     function sendToReceiver(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(
-            proposal.receiver == msg.sender,
+            proposal.isReceiver[msg.sender],
             "msg.sender is not a valid receiver for the given proposal"
         );
         require(proposal.completed == false, "The proposal is already completed");
@@ -200,7 +242,13 @@ contract Split is Ownable {
 
         // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         proposal.completed = true;
-        Address.sendValue(payable(proposal.receiver), proposal.totalAmount);
+
+        for (uint256 i = 0; i < proposal.receivers.length; i++) {
+            Address.sendValue(
+                payable(proposal.receivers[i]),
+                proposal.receiverAmounts[i]
+            );
+        }
     }
 
     /**
@@ -290,7 +338,7 @@ contract Split is Ownable {
     {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.isPayer[payer], "Invalid payer for the proposalNumber");
-        return proposal.amountsByAddress[payer];
+        return proposal.payerAmountsByAddress[payer];
     }
 
     /**

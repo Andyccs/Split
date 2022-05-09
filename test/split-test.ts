@@ -26,11 +26,16 @@ interface CreateSplitProposalResult {
 async function createSplitProposal(
   split: Split,
   payers: string[],
-  receiver: string
+  receivers: string[]
 ): Promise<CreateSplitProposalResult> {
   const amounts = [325];
 
-  const results = await split.createSplitProposal(payers, amounts, receiver);
+  const results = await split.createSplitProposal(
+    payers,
+    amounts,
+    receivers,
+    amounts
+  );
   expect(results.value).to.equal(0);
   return {
     proposalNumber: results.value,
@@ -58,28 +63,40 @@ describe('Split.createSplitProposal', () => {
     const results: ContractTransaction = await split.createSplitProposal(
       [payerSigner.address],
       amounts,
-      receiverSigner.address
+      [receiverSigner.address],
+      amounts
     );
     expect(results.value).to.equal(0);
   });
 
   it('Should not createSplitProposal if payers is empty', async () => {
     const amounts = [1];
-    await expect(split.createSplitProposal([], amounts, receiverSigner.address))
-      .to.be.reverted;
+    await expect(
+      split.createSplitProposal([], amounts, [receiverSigner.address], amounts)
+    ).to.be.reverted;
   });
 
   it('Should not createSplitProposal if receiver address is 0x0', async () => {
     const amounts = [1];
     await expect(
-      split.createSplitProposal([payerSigner.address], amounts, NULL_ADDRESS)
+      split.createSplitProposal(
+        [payerSigner.address],
+        amounts,
+        [NULL_ADDRESS],
+        amounts
+      )
     ).to.be.reverted;
   });
 
   it('Should not createSplitProposal if payer address is 0x0', async () => {
     const amounts = [1];
     await expect(
-      split.createSplitProposal([NULL_ADDRESS], amounts, receiverSigner.address)
+      split.createSplitProposal(
+        [NULL_ADDRESS],
+        amounts,
+        [receiverSigner.address],
+        amounts
+      )
     ).to.be.reverted;
   });
 
@@ -89,7 +106,8 @@ describe('Split.createSplitProposal', () => {
       split.createSplitProposal(
         [payerSigner.address, payerSigner.address],
         amounts,
-        receiverSigner.address
+        [receiverSigner.address],
+        amounts
       )
     ).to.be.reverted;
   });
@@ -110,7 +128,7 @@ describe('Split.sendAmount', () => {
     const result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
     expect(
       await split
@@ -130,7 +148,7 @@ describe('Split.sendAmount', () => {
     const result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
     await expect(
       split
@@ -143,7 +161,7 @@ describe('Split.sendAmount', () => {
     const result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
     expect(
       await split
@@ -171,7 +189,7 @@ describe('Split.sendAmount', () => {
     const {proposalNumber, amount} = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
     await expect(
       split.connect(receiverSigner).sendAmount(proposalNumber, {value: amount})
@@ -182,7 +200,7 @@ describe('Split.sendAmount', () => {
     const {proposalNumber, amount} = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
     expect(
       await split
@@ -198,7 +216,7 @@ describe('Split.sendAmount', () => {
     const result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
     await expect(
       split
@@ -222,7 +240,7 @@ describe('Split.withdrawAmount', () => {
     result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
 
     expect(
@@ -302,7 +320,7 @@ describe('Split.sendToReceiver', () => {
     result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
 
     expect(
@@ -435,7 +453,7 @@ describe('Split Getters', () => {
     result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
   });
 
@@ -507,7 +525,7 @@ describe('Split.isPaidForPayer', () => {
     result = await createSplitProposal(
       split,
       [payerSigner.address],
-      receiverSigner.address
+      [receiverSigner.address]
     );
     expect(
       await split
