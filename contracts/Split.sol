@@ -135,6 +135,7 @@ contract Split is Ownable {
         returns (uint256)
     {
         require(payers.length != 0, "No payer address is provided");
+        require(receivers.length != 0, "No receiver address is provided");
         require(
             payers.length == payerAmounts.length,
             "The length of payers and payerAmounts must be the same"
@@ -323,6 +324,23 @@ contract Split is Ownable {
     }
 
     /**
+     * @dev Returns a list of receivers for the given proposalNumber.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
+    function getReceiver(
+        uint256 proposalNumber
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (address[] memory)
+    {
+        return proposals[proposalNumber].receivers;
+    }
+
+    // TODO: Rename getAmounts to getPayerAmounts
+    /**
      * @dev Returns a list of amounts that are required to be paid by each payer for the given
      * proposalNumber.
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
@@ -337,6 +355,23 @@ contract Split is Ownable {
         returns (uint256[] memory)
     {
         return proposals[proposalNumber].payerAmounts;
+    }
+
+    /**
+     * @dev Returns a list of amounts that will be paid by each receiver for the given
+     * proposalNumber.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
+    function getReceiverAmounts(
+        uint256 proposalNumber
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (uint256[] memory)
+    {
+        return proposals[proposalNumber].receiverAmounts;
     }
 
     /**
@@ -360,7 +395,27 @@ contract Split is Ownable {
     }
 
     /**
-     * @dev Whether a given payer address is a valid payer in a given SplitProposal.
+     * @dev Returns the amount that will be paid to receiver in a given SplitProposal.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     * @param receiver The receiver address
+     */
+    function getAmountForReceiver(
+        uint256 proposalNumber,
+        address receiver
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (uint256)
+    {
+        SplitProposal storage proposal = proposals[proposalNumber];
+        require(proposal.isReceiver[receiver], "Invalid receiver for the proposalNumber");
+        return proposal.receiverAmountsByAddress[receiver];
+    }
+
+    /**
+     * @dev Whether a given address is a valid payer in a given SplitProposal.
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      * @param payer The payer address
@@ -375,6 +430,24 @@ contract Split is Ownable {
         returns (bool)
     {
         return proposals[proposalNumber].isPayer[payer];
+    }
+
+    /**
+     * @dev Whether a given address is a valid receiver in a given SplitProposal.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     * @param receiver The receiver address
+     */
+    function isReceiver(
+        uint256 proposalNumber,
+        address receiver
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (bool)
+    {
+        return proposals[proposalNumber].isReceiver[receiver];
     }
 
     /**
@@ -395,5 +468,25 @@ contract Split is Ownable {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.isPayer[payer], "Invalid payer for the proposalNumber");
         return proposal.paidByAddress[payer];
+    }
+
+    /**
+     * @dev Whether a given receiver address has withdrawn for a given SplitProposal.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     * @param receiver The receiver address
+     */
+    function isWithdrawnForReceiver(
+        uint256 proposalNumber,
+        address receiver
+    )
+        public
+        view
+        validProposalNumber(proposalNumber)
+        returns (bool)
+    {
+        SplitProposal storage proposal = proposals[proposalNumber];
+        require(proposal.isReceiver[receiver], "Invalid receiver for the proposalNumber");
+        return proposal.withdrawByAddress[receiver];
     }
 }
