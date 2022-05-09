@@ -273,3 +273,47 @@ describe('Split.withdrawAmount', () => {
     ).to.be.reverted;
   });
 });
+
+describe('Split.sendToReceiver', () => {
+  let split: Split;
+  let payerSigner: SignerWithAddress;
+  let receiverSigner: SignerWithAddress;
+  let result: CreateSplitProposalResult;
+
+  beforeEach(async () => {
+    split = await createSplitContract();
+    let _owner: SignerWithAddress;
+    [_owner, payerSigner, receiverSigner] = await ethers.getSigners();
+
+    result = await createSplitProposal(
+      split,
+      [payerSigner.address],
+      receiverSigner.address
+    );
+
+    await expect(
+      await split
+        .connect(payerSigner)
+        .sendAmount(result.proposalNumber, {value: result.amount})
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [-result.amount, 0, result.amount]
+    );
+    expect(
+      await split.isPaidForPayer(result.proposalNumber, payerSigner.address)
+    ).to.be.true;
+  });
+
+  it('Should sendToReceiver successfully', async () => {
+    await expect(
+      await split.connect(receiverSigner).sendToReceiver(result.proposalNumber)
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [0, result.amount, -result.amount]
+    );
+
+    await expect(
+      await split.connect(receiverSigner).isCompleted(result.proposalNumber)
+    ).to.be.true;
+  });
+});
