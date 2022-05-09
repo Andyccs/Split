@@ -72,6 +72,10 @@ contract Split is Ownable {
         // of this mapping is set to false when withdrawAmount() is called successfully.
         mapping(address => bool) paidByAddress;
 
+        // withdrawByAddress tracks whether a receiver address has withdraw the payment. The value
+        // of this mapping is set to true when receiverWithdrawAmount() is called successfully.
+        mapping(address => bool) withdrawByAddress;
+
         // Whether this SplitProposal has completed. This field is set to true by sendToReceiver()
         // if the method completed successfully. Once a SplitProposal is completed, it is no longer
         // possible to interact with the SplitProposal.
@@ -205,12 +209,7 @@ contract Split is Ownable {
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
-    function withdrawAmount(
-        uint256 proposalNumber
-    )
-        public
-        validProposalNumber(proposalNumber)
-    {
+    function withdrawAmount(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(proposal.completed == false, "The proposal is already completed");
         require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
@@ -222,11 +221,13 @@ contract Split is Ownable {
     }
 
     /**
-     * @dev Receiver calls this method to send all the amounts that are already paid by all the
-     * payers to the receiver. All payers must have made required payment, before this method can be
-     * executed successfully.
+     * @dev Receiver calls this method to mark the SplitProposal as completed. Once a SplitProposal
+     * is marked as completed, sender is no longer able to withdraw amounts, and receiver can start
+     * withdraw amounts.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
      */
-    function sendToReceiver(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
+    function markAsCompleted(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(
             proposal.isReceiver[msg.sender],
@@ -240,15 +241,30 @@ contract Split is Ownable {
             );
         }
 
-        // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         proposal.completed = true;
+    }
 
-        for (uint256 i = 0; i < proposal.receivers.length; i++) {
-            Address.sendValue(
-                payable(proposal.receivers[i]),
-                proposal.receiverAmounts[i]
-            );
-        }
+    /**
+     * @dev Receiver calls this method to withdraw amount that is paid by payers. This method can
+     * only be called after the SplitProposal is markAsCompleted.
+     * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
+     * new SplitProposal using createSplitProposal.
+     */
+    function receiverWithdrawAmount(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
+        SplitProposal storage proposal = proposals[proposalNumber];
+        require(
+            proposal.isReceiver[msg.sender],
+            "msg.sender is not a valid receiver for the given proposal"
+        );
+        require(proposal.completed, "The proposal is not yet markAsCompleted");
+        require(
+            proposal.withdrawByAddress[msg.sender] == false,
+            "msg.sender has withdraw the amounts"
+        );
+
+        // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
+        proposal.withdrawByAddress[msg.sender] = true;
+        Address.sendValue(payable(msg.sender), proposal.receiverAmountsByAddress[msg.sender]);
     }
 
     /**
