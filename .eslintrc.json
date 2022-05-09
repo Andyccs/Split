@@ -19,5 +19,13 @@
         ]
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["test/split-test.ts"],
+      "rules": {
+        "node/no-unpublished-import": "off"
+      }
+    }
+  ]
 }
