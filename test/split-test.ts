@@ -316,4 +316,32 @@ describe('Split.sendToReceiver', () => {
       await split.connect(receiverSigner).isCompleted(result.proposalNumber)
     ).to.be.true;
   });
+
+  it('Should not sendToReceiver if not receiver', async () => {
+    await expect(
+      split.connect(payerSigner).sendToReceiver(result.proposalNumber)
+    ).to.be.reverted;
+  });
+
+  it('Should not sendToReceiver if invalid proposalNumber', async () => {
+    await expect(
+      split.connect(receiverSigner).sendToReceiver(ethers.BigNumber.from(1))
+    ).to.be.reverted;
+  });
+
+  it('Should not sendToReceiver if not yet paid', async () => {
+    await expect(
+      await split.connect(payerSigner).withdrawAmount(result.proposalNumber)
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [result.amount, 0, -result.amount]
+    );
+    expect(
+      await split.isPaidForPayer(result.proposalNumber, payerSigner.address)
+    ).to.be.false;
+
+    await expect(
+      split.connect(receiverSigner).sendToReceiver(result.proposalNumber)
+    ).to.be.reverted;
+  });
 });
