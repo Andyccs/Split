@@ -1,0 +1,23 @@
+{
+  "extends": "./node_modules/gts/",
+  "rules": {
+    "@typescript-eslint/no-unused-vars": [
+      "warn", {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "node/no-unpublished-import": [
+      "error", {
+        "allowModules": [
+          "@nomiclabs/hardhat-ethers",
+          "@nomiclabs/hardhat-waffle",
+          "@typechain/hardhat",
+          "chai",
+          "ethers",
+          "hardhat"
+        ]
+      }
+    ]
+  }
+}
