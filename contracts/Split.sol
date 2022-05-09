@@ -96,6 +96,7 @@ contract Split is Ownable {
      * @dev Creates a SplitProposal
      * @param payers An array of payers that need to pay the given amounts
      * @param amounts An array of amounts that needs to be paid by each payer
+     * @param receiver The receiver of this SplitProposal once it is completed
      * @return The SplitProposal number
      */
     function createSplitProposal(
