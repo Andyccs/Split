@@ -7,18 +7,21 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title Split
- * @dev Split contract allows users to create SplitProposal. A SplitProposal contains an array of
- * payers, and the amounts that are required to be paid by each payer. Once all payers have paid the
- * required amounts (by calling the sendAmount() method), any receiver can initiate a
- * sendToReceiver() call to send all amounts paid by all the payers to the receiver and mark the
- * SplitProposal as completed. Before a SplitProposal is marked as completed, any payer can call
+ * @dev Split contract allows users to create SplitProposal. A SplitProposal contains payers, the
+ * amounts that are required to be paid by each payer, receivers, and amounts that will be paid to
+ * each receiver. Once all payers have paid the required amounts (by calling the sendAmount()
+ * method), any receiver can initiate a markAsCompleted() call mark the SplitProposal as completed.
+ * Once the SplitProposal is marked as completed, receiver can call receiverWithdrawAmount to
+ * withdraw amount from the SplitProposal.
+ *
+ * Before a SplitProposal is marked as completed, any payer can call
  * withdrawAmount() to withdraw the amount that payer has already paid for the SplitProposal.
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
 contract Split is Ownable {
 
-    // SplitProposal contains an array of payers and the amounts that are required to by paid by
-    // each payer, before the total amount is sent to the receiver.
+    // SplitProposal contains payers, the amounts that are required to be paid by each payer,
+    // receivers, and amounts that will be paid to each receiver.
     struct SplitProposal {
         // payers is a list of payer addresses that are required to pay the specified amount (as
         // indicated by the "payerAmounts" variable below) before a SplitProposal can be marked as
@@ -92,9 +95,7 @@ contract Split is Ownable {
     // The next proposal index that is going to be used in createSplitProposal()
     uint256 public nextProposalIndex;
 
-    // Any tips that can be claimed by the owner. Extra amounts that are sent by payers using
-    // sendAmount() to this contract are tracked by this variable, and these extra amounts are
-    // considered tips for the owner.
+    // Any tips that can be claimed by the owner.
     uint256 public claimableTips;
 
     // Whether the given proposalNumber is valid.
