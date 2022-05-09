@@ -3,7 +3,7 @@ import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {expect} from 'chai';
 import {ethers} from 'hardhat';
 import type {Split} from '../typechain-types/contracts';
-import type {ContractTransaction} from 'ethers';
+import type {BigNumber, ContractTransaction} from 'ethers';
 
 const NULL_ADDRESS = ethers.utils.getAddress(
   '0x0000000000000000000000000000000000000000'
@@ -16,11 +16,16 @@ async function createSplitContract(): Promise<Split> {
   return split;
 }
 
+interface CreateSplitProposalResult {
+  proposalNumber: BigNumber;
+  amount: number;
+}
+
 async function createSplitProposal(
   split: Split,
   payers: string[],
   receiver: string
-) {
+): Promise<CreateSplitProposalResult> {
   const amounts = [1];
 
   const results = await split.createSplitProposal(payers, amounts, receiver);
@@ -119,7 +124,7 @@ describe('Split.sendAmount', () => {
   });
 
   it('Should not sendAmount with invalid proposalNumber', async () => {
-    const {_proposalNumber, amount} = await createSplitProposal(
+    const result = await createSplitProposal(
       split,
       [payerAddress.address],
       receiverAddress.address
@@ -127,7 +132,7 @@ describe('Split.sendAmount', () => {
     await expect(
       split
         .connect(payerAddress)
-        .sendAmount(ethers.BigNumber.from(1), {value: amount})
+        .sendAmount(ethers.BigNumber.from(1), {value: result.amount})
     ).to.be.reverted;
   });
 
@@ -188,7 +193,7 @@ describe('Split.sendAmount', () => {
   });
 
   it('Should not sendAmount if sender sends invalid amount', async () => {
-    const {proposalNumber, _amount} = await createSplitProposal(
+    const result = await createSplitProposal(
       split,
       [payerAddress.address],
       receiverAddress.address
@@ -196,7 +201,50 @@ describe('Split.sendAmount', () => {
     await expect(
       split
         .connect(payerAddress)
-        .sendAmount(proposalNumber, {value: ethers.BigNumber.from(123)})
+        .sendAmount(result.proposalNumber, {value: ethers.BigNumber.from(123)})
     ).to.be.reverted;
+  });
+});
+
+describe('Split.withdrawAmount', () => {
+  let split: Split;
+  let payerAddress: SignerWithAddress;
+  let receiverAddress: SignerWithAddress;
+  let result: CreateSplitProposalResult;
+
+  beforeEach(async () => {
+    split = await createSplitContract();
+    let _owner: SignerWithAddress;
+    [_owner, payerAddress, receiverAddress] = await ethers.getSigners();
+
+    result = await createSplitProposal(
+      split,
+      [payerAddress.address],
+      receiverAddress.address
+    );
+
+    await expect(
+      await split
+        .connect(payerAddress)
+        .sendAmount(result.proposalNumber, {value: result.amount})
+    ).to.changeEtherBalances(
+      [payerAddress, receiverAddress, split],
+      [-result.amount, 0, result.amount]
+    );
+    expect(
+      await split.isPaidForPayer(result.proposalNumber, payerAddress.address)
+    ).to.be.true;
+  });
+
+  it('Should withdrawAmount successfully by payer', async () => {
+    await expect(
+      await split.connect(payerAddress).withdrawAmount(result.proposalNumber)
+    ).to.changeEtherBalances(
+      [payerAddress, receiverAddress, split],
+      [result.amount, 0, -result.amount]
+    );
+    expect(
+      await split.isPaidForPayer(result.proposalNumber, payerAddress.address)
+    ).to.be.false;
   });
 });

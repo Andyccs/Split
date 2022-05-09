@@ -136,8 +136,7 @@ contract Split is Ownable {
     /**
      * @dev Payer sends the required amount to a specific SplitProposal (as indicated by
      * "proposalNumber" input argument). If payer is not a valid payer, not sending enough amount,
-     * or already paid for the SplitProposal, the transaction is reverted. Any extra amount that are
-     * sent by payer is not refundable, and are considered tips for the contract owner.
+     * or already paid for the SplitProposal, the transaction is reverted.
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
@@ -165,7 +164,6 @@ contract Split is Ownable {
         uint256 proposalNumber
     )
         public
-        payable
         validProposalNumber(proposalNumber)
     {
         SplitProposal storage proposal = proposals[proposalNumber];
