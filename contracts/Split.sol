@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
  * @title Split
  * @dev Split contract allows users to create SplitProposal. A SplitProposal contains an array of
  * payers, and the amounts that are required to be paid by each payer. Once all payers have paid the
- * required amounts (by calling the sendAmount() method), any payer or receiver can initiate a
+ * required amounts (by calling the sendAmount() method), any receiver can initiate a
  * sendToReceiver() call to send all amounts paid by all the payers to the receiver and mark the
  * SplitProposal as completed. Before a SplitProposal is marked as completed, any payer can call
  * withdrawAmount() to withdraw the amount that payer has already paid for the SplitProposal.
@@ -177,15 +177,15 @@ contract Split is Ownable {
     }
 
     /**
-     * @dev Payer or receiver call this method to send all the amounts that are already paid by
-     * all the payers to the receiver. All payers must have made required payment, before this
-     * method can be executed successfully.
+     * @dev Receiver calls this method to send all the amounts that are already paid by all the
+     * payers to the receiver. All payers must have made required payment, before this method can be
+     * executed successfully.
      */
     function sendToReceiver(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(
-            proposal.isPayer[msg.sender] || proposal.receiver == msg.sender,
-            "msg.sender is not a valid payer or a receiver for the given proposal"
+            proposal.receiver == msg.sender,
+            "msg.sender is not a valid receiver for the given proposal"
         );
         require(proposal.completed == false, "The proposal is already completed");
         for (uint256 i = 0; i < proposal.payers.length; i++) {
