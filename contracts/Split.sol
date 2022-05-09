@@ -21,14 +21,15 @@ contract Split is Ownable {
     // each payer, before the total amount is sent to the receiver.
     struct SplitProposal {
         // payers is a list of payer addresses that are required to pay the specified amount (as
-        // indicated by the "amounts" variable below) before a SplitProposal can be marked as
+        // indicated by the "payerAmounts" variable below) before a SplitProposal can be marked as
         // completed. payers is one of the input arguments of createSplitProposal() method.
         address[] payers;
 
-        // amounts is a list of amounts that need to be paid by each payer, i.e. payers[i] should
-        // pay amounts[i] for all i < amounts.length, before a SplitProposal can be marked as
-        // completed. amounts is one of the input arguments of createSplitProposal() method.
-        uint256[] amounts;
+        // payerAmounts is a list of amounts that need to be paid by each payer, i.e. payers[i]
+        // should pay payerAmounts[i] for all i < payerAmounts.length, before a SplitProposal can be
+        // marked as completed. payerAmounts is one of the input arguments of createSplitProposal()
+        // payerAmountsmethod.
+        uint256[] payerAmounts;
 
         // receiver is the receiver address for all the amounts that are paid by payers. Note that
         // there is no restriction on who is the receiver, and it is possible for a receiver to be
@@ -45,8 +46,8 @@ contract Split is Ownable {
         // changed after that.
         mapping(address => uint256) amountsByAddress;
 
-        // totalAmount is the sum of "amounts". This value is created during createSplitProposal()
-        // and should never be changed after that.
+        // totalAmount is the sum of "payerAmounts". This value is created during
+        // createSplitProposal() and should never be changed after that.
         uint256 totalAmount;
 
         // paidByAddress tracks whether a payer address has already made the required payment. The
@@ -88,6 +89,7 @@ contract Split is Ownable {
         claimableTips += msg.value;
     }
 
+    // Function to receive Ether.
     fallback() external payable {
         claimableTips += msg.value;
     }
@@ -118,7 +120,7 @@ contract Split is Ownable {
         validProposals[nextProposalIndex] = true;
         SplitProposal storage proposal = proposals[nextProposalIndex];
         proposal.payers = payers;
-        proposal.amounts = amounts;
+        proposal.payerAmounts = amounts;
         proposal.receiver = receiver;
 
         for (uint256 i = 0; i < payers.length; i++) {
@@ -268,7 +270,7 @@ contract Split is Ownable {
         validProposalNumber(proposalNumber)
         returns (uint256[] memory)
     {
-        return proposals[proposalNumber].amounts;
+        return proposals[proposalNumber].payerAmounts;
     }
 
     /**
