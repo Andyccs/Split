@@ -116,7 +116,6 @@ describe('Split.sendAmount', () => {
 
     expect(await split.isPaidForPayer(proposalNumber, payerAddress.address)).to
       .be.true;
-    expect(await split.claimableTips()).to.equal(0);
   });
 
   it('Should not sendAmount with invalid proposalNumber', async () => {
