@@ -1,21 +1,26 @@
-require("@nomiclabs/hardhat-waffle");
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import "@nomiclabs/hardhat-waffle";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import type { Split } from "../typechain-types/contracts";
+import type { ContractTransaction } from "ethers";
 
 const NULL_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
-async function createSplitContract() {
-    const Split = await ethers.getContractFactory("Split");
-    let split = await Split.deploy();
+async function createSplitContract(): Promise<Split> {
+    const SplitContract = await ethers.getContractFactory("Split");
+    let split = await SplitContract.deploy();
     await split.deployed();
     return split;
 }
 
-async function createSplitProposal(splitContract, payers, receiver) {
-  const accounts = await ethers.getSigners();
+async function createSplitProposal(
+    split: Split,
+    payers: string[],
+    receiver: string) {
   const amounts = [1];
 
-  const results = await splitContract.createSplitProposal(payers, amounts, receiver);
+  const results = await split.createSplitProposal(payers, amounts, receiver);
   expect(results.value).to.equal(0);
   return {
     'proposalNumber': results.value,
@@ -24,77 +29,82 @@ async function createSplitProposal(splitContract, payers, receiver) {
 }
 
 describe("Split.createSplitProposal", function () {
+  let split: Split;
+
+  let owner: SignerWithAddress;
+  let payerSigner: SignerWithAddress;
+  let receiverSigner: SignerWithAddress;
+
+  beforeEach(async () => {
+    split = await createSplitContract();
+    [owner, payerSigner, receiverSigner] = await ethers.getSigners();
+  });
+
   it("Should deploy SplitProposal successfully", async function () {
-    await createSplitContract();
+    // No-op
   });
 
   it("Should createSplitProposal successfully", async function () {
-    let split = await createSplitContract();
-
-    const accounts = await ethers.getSigners();
-    const payers = [accounts[0].address];
     const amounts = [1];
-    const receiver = accounts[1].address;
-
-    const results = await split.createSplitProposal(payers, amounts, receiver);
+    const results: ContractTransaction =
+        await split.createSplitProposal(
+          [payerSigner.address],
+          [1],
+          receiverSigner.address);
     expect(results.value).to.equal(0);
   });
 
+
   it("Should not createSplitProposal if payers is empty", async function () {
-    let split = await createSplitContract();
-
-    const accounts = await ethers.getSigners();
-    const payers = [];
     const amounts = [1];
-    const receiver = accounts[1].address;
-
-    await expect(split.createSplitProposal(payers, amounts, receiver))
+    await expect(
+        split.createSplitProposal(
+          [],
+          amounts,
+          receiverSigner.address))
       .to.be.reverted;
   });
 
   it("Should not createSplitProposal if receiver address is 0x0", async function () {
-    let split = await createSplitContract();
-
-    const accounts = await ethers.getSigners();
-    const payers = [accounts[0].address];
     const amounts = [1];
-    const receiver = NULL_ADDRESS;
-
-    await expect(split.createSplitProposal(payers, amounts, receiver))
+    await expect(
+        split.createSplitProposal(
+          [payerSigner.address],
+          amounts,
+          NULL_ADDRESS)
+        )
       .to.be.reverted;
   });
 
   it("Should not createSplitProposal if payer address is 0x0", async function () {
-    let split = await createSplitContract();
-
-    const accounts = await ethers.getSigners();
-    const payers = [NULL_ADDRESS];
     const amounts = [1];
-    const receiver = accounts[1].address;
-
-    await expect(split.createSplitProposal(payers, amounts, receiver))
+    await expect(
+        split.createSplitProposal(
+          [NULL_ADDRESS],
+          amounts,
+          receiverSigner.address)
+        )
       .to.be.reverted;
   });
 
   it("Should not createSplitProposal if payer addresses are duplicated", async function () {
-    let split = await createSplitContract();
-
-    const accounts = await ethers.getSigners();
-    const payers = [accounts[0].address, accounts[0].address];
     const amounts = [1, 2];
-    const receiver = accounts[1].address;
-
-    await expect(split.createSplitProposal(payers, amounts, receiver))
+    await expect(
+        split.createSplitProposal(
+          [payerSigner.address, payerSigner.address],
+          amounts,
+          receiverSigner.address)
+        )
       .to.be.reverted;
   });
 });
 
 describe("Split.sendAmount", () => {
-  let split;
+  let split: Split;
 
-  let owner;
-  let payerAddress;
-  let receiverAddress;
+  let owner: SignerWithAddress;
+  let payerAddress: SignerWithAddress;
+  let receiverAddress: SignerWithAddress;
 
   beforeEach(async () => {
     split = await createSplitContract();
@@ -116,7 +126,7 @@ describe("Split.sendAmount", () => {
   });
 
   it("Should not sendAmount with invalid proposalNumber", async function () {
-    const { _, amount } =
+    const { proposalNumber, amount } =
         await createSplitProposal(split, [payerAddress.address], receiverAddress.address);
     await expect(
         split
