@@ -15,7 +15,8 @@
           "@typechain/hardhat",
           "chai",
           "ethers",
-          "hardhat"
+          "hardhat",
+          "solidity-coverage"
         ]
       }
     ]

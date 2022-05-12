@@ -2,6 +2,7 @@ import {task} from 'hardhat/config';
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
+import 'solidity-coverage';
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -21,4 +22,10 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
  */
 export default {
   solidity: '0.8.4',
+  settings: {
+    optimizer: {
+      enabled: true,
+      runs: 200,
+    },
+  },
 };
