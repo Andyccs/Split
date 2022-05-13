@@ -76,6 +76,49 @@ describe('Split.createSplitProposal', () => {
     ).to.be.reverted;
   });
 
+  it('Should not createSplitProposal if receivers is empty', async () => {
+    const amounts = [1];
+    await expect(
+      split.createSplitProposal([payerSigner.address], amounts, [], amounts)
+    ).to.be.reverted;
+  });
+
+  it('Should not createSplitProposal if payers.length != payerAmounts.length', async () => {
+    const amounts = [1];
+    await expect(
+      split.createSplitProposal(
+        [payerSigner.address],
+        [],
+        [receiverSigner.address],
+        amounts
+      )
+    ).to.be.reverted;
+  });
+
+  it('Should not createSplitProposal if receivers.length != receiverAmounts.length', async () => {
+    const amounts = [1];
+    await expect(
+      split.createSplitProposal(
+        [payerSigner.address],
+        amounts,
+        [receiverSigner.address],
+        []
+      )
+    ).to.be.reverted;
+  });
+
+  it('Should not createSplitProposal if payers.length != receivers.length', async () => {
+    const amounts = [1];
+    await expect(
+      split.createSplitProposal(
+        [payerSigner.address, payerSigner.address],
+        [1, 2],
+        [receiverSigner.address],
+        amounts
+      )
+    ).to.be.reverted;
+  });
+
   it('Should not createSplitProposal if receiver address is 0x0', async () => {
     const amounts = [1];
     await expect(
@@ -101,13 +144,12 @@ describe('Split.createSplitProposal', () => {
   });
 
   it('Should not createSplitProposal if payer addresses are duplicated', async () => {
-    const amounts = [1, 2];
     await expect(
       split.createSplitProposal(
         [payerSigner.address, payerSigner.address],
-        amounts,
+        [1, 2],
         [receiverSigner.address],
-        amounts
+        [1]
       )
     ).to.be.reverted;
   });

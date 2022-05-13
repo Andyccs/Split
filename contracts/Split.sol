@@ -144,10 +144,6 @@ contract Split is Ownable {
             receivers.length == receiverAmounts.length,
             "The length of receivers and receiverAmounts must be the same"
         );
-        require(
-            payers.length == receivers.length,
-            "The length of payers and receivers must be the same"
-        );
         require(validProposals[nextProposalIndex] == false, "nextProposalIndex is already used");
 
         validProposals[nextProposalIndex] = true;
@@ -158,23 +154,26 @@ contract Split is Ownable {
         proposal.receiverAmounts = receiverAmounts;
 
         uint256 totalPayerAmounts;
-        uint256 totalReceiverAmounts;
         for (uint256 i = 0; i < payers.length; i++) {
             require(payers[i] != address(0), "payer account is the zero address");
-            require(receivers[i] != address(0), "receiver account is the zero address");
             require(
                 proposal.isPayer[payers[i]] == false,
                 "A payer exist more than once in payers input argument"
             );
+            proposal.isPayer[payers[i]] = true;
+            proposal.payerAmountsByAddress[payers[i]] = payerAmounts[i];
+            totalPayerAmounts += payerAmounts[i];
+        }
+
+        uint256 totalReceiverAmounts;
+        for (uint256 i = 0; i < payers.length; i++) {
+            require(receivers[i] != address(0), "receiver account is the zero address");
             require(
                 proposal.isReceiver[receivers[i]] == false,
                 "A receiver exist more than once in receivers input argument"
             );
-            proposal.isPayer[payers[i]] = true;
             proposal.isReceiver[receivers[i]] = true;
-            proposal.payerAmountsByAddress[payers[i]] = payerAmounts[i];
             proposal.receiverAmountsByAddress[receivers[i]] = receiverAmounts[i];
-            totalPayerAmounts += payerAmounts[i];
             totalReceiverAmounts += receiverAmounts[i];
         }
         require(
