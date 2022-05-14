@@ -413,6 +413,20 @@ describe('Split.markAsCompleted', () => {
     ).to.be.true;
   });
 
+  it('Should not markAsCompleted if already completed', async () => {
+    expect(
+      await split.connect(receiverSigner).markAsCompleted(result.proposalNumber)
+    ).to.changeEtherBalances([payerSigner, receiverSigner, split], [0, 0, 0]);
+
+    expect(
+      await split.connect(receiverSigner).isCompleted(result.proposalNumber)
+    ).to.be.true;
+
+    await expect(
+      split.connect(receiverSigner).markAsCompleted(result.proposalNumber)
+    ).to.be.reverted;
+  });
+
   it('Should not markAsCompleted if not receiver', async () => {
     await expect(
       split.connect(payerSigner).markAsCompleted(result.proposalNumber)
@@ -439,6 +453,91 @@ describe('Split.markAsCompleted', () => {
     await expect(
       split.connect(receiverSigner).markAsCompleted(result.proposalNumber)
     ).to.be.reverted;
+  });
+});
+
+async function markAsCompleted(
+  split: Split,
+  callerSigner: SignerWithAddress,
+  result: CreateSplitProposalResult
+) {
+  await split.connect(callerSigner).markAsCompleted(result.proposalNumber);
+  expect(await split.connect(callerSigner).isCompleted(result.proposalNumber))
+    .to.be.true;
+}
+
+describe('Split.receiverWithdrawAmount', () => {
+  let split: Split;
+  let payerSigner: SignerWithAddress;
+  let receiverSigner: SignerWithAddress;
+  let result: CreateSplitProposalResult;
+
+  beforeEach(async () => {
+    split = await createSplitContract();
+    let _owner: SignerWithAddress;
+    [_owner, payerSigner, receiverSigner] = await ethers.getSigners();
+
+    result = await createSplitProposal(
+      split,
+      [payerSigner.address],
+      [receiverSigner.address]
+    );
+
+    expect(
+      await split
+        .connect(payerSigner)
+        .sendAmount(result.proposalNumber, {value: result.amount})
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [-result.amount, 0, result.amount]
+    );
+    expect(
+      await split.isPaidForPayer(result.proposalNumber, payerSigner.address)
+    ).to.be.true;
+  });
+
+  it('Should receiverWithdrawAmount successfully', async () => {
+    await markAsCompleted(split, receiverSigner, result);
+    expect(
+      await split
+        .connect(receiverSigner)
+        .receiverWithdrawAmount(result.proposalNumber)
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [0, result.amount, -result.amount]
+    );
+  });
+
+  it('Should not receiverWithdrawAmount if caller is not a receiver', async () => {
+    await markAsCompleted(split, receiverSigner, result);
+    await expect(
+      split.connect(payerSigner).receiverWithdrawAmount(result.proposalNumber)
+    ).to.be.reverted;
+  });
+
+  it('Should not receiverWithdrawAmount if proposal is not completed', async () => {
+    await expect(
+      split
+        .connect(receiverSigner)
+        .receiverWithdrawAmount(result.proposalNumber)
+    ).to.be.reverted;
+  });
+
+  it('Should not receiverWithdrawAmount if receiver already withdraw amount', async () => {
+    await markAsCompleted(split, receiverSigner, result);
+    expect(
+      await split
+        .connect(receiverSigner)
+        .receiverWithdrawAmount(result.proposalNumber)
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [0, result.amount, -result.amount]
+    );
+    await expect(
+      split
+        .connect(receiverSigner)
+        .receiverWithdrawAmount(result.proposalNumber)
+    ).to.be.revertedWith('msg.sender has withdraw the amounts');
   });
 });
 
