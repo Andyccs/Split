@@ -456,21 +456,21 @@ describe('Split.markAsCompleted', () => {
   });
 });
 
-async function markAsCompleted(
-  split: Split,
-  callerSigner: SignerWithAddress,
-  result: CreateSplitProposalResult
-) {
-  await split.connect(callerSigner).markAsCompleted(result.proposalNumber);
-  expect(await split.connect(callerSigner).isCompleted(result.proposalNumber))
-    .to.be.true;
-}
-
 describe('Split.receiverWithdrawAmount', () => {
   let split: Split;
   let payerSigner: SignerWithAddress;
   let receiverSigner: SignerWithAddress;
   let result: CreateSplitProposalResult;
+
+  async function markAsCompleted(
+    split: Split,
+    callerSigner: SignerWithAddress,
+    result: CreateSplitProposalResult
+  ) {
+    await split.connect(callerSigner).markAsCompleted(result.proposalNumber);
+    expect(await split.connect(callerSigner).isCompleted(result.proposalNumber))
+      .to.be.true;
+  }
 
   beforeEach(async () => {
     split = await createSplitContract();
