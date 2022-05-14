@@ -153,6 +153,28 @@ describe('Split.createSplitProposal', () => {
       )
     ).to.be.reverted;
   });
+
+  it('Should not createSplitProposal if receiver addresses are duplicated', async () => {
+    await expect(
+      split.createSplitProposal(
+        [payerSigner.address],
+        [1],
+        [receiverSigner.address, receiverSigner.address],
+        [1, 2]
+      )
+    ).to.be.reverted;
+  });
+
+  it('Should not createSplitProposal if sum(payerAmounts) != sum(receiverAmounts)', async () => {
+    await expect(
+      split.createSplitProposal(
+        [payerSigner.address],
+        [1],
+        [receiverSigner.address],
+        [2]
+      )
+    ).to.be.reverted;
+  });
 });
 
 describe('Split.sendAmount', () => {

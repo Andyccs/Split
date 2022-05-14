@@ -166,7 +166,7 @@ contract Split is Ownable {
         }
 
         uint256 totalReceiverAmounts;
-        for (uint256 i = 0; i < payers.length; i++) {
+        for (uint256 i = 0; i < receivers.length; i++) {
             require(receivers[i] != address(0), "receiver account is the zero address");
             require(
                 proposal.isReceiver[receivers[i]] == false,
