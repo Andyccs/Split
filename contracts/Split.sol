@@ -19,6 +19,56 @@ import "@openzeppelin/contracts/utils/Address.sol";
  */
 contract Split {
 
+    string internal EC_50_INVALID_PROPOSAL_NUMBER = "50";
+
+    // No payer address is provided
+    string internal EC_51_NO_PAYER = "51";
+
+    // No receiver address is provided
+    string internal EC_52_NO_RECEIVER = "52";
+
+    // The length of payers and payerAmounts must be the same
+    string internal EC_53_INVALID_PAYERS_AND_AMOUNTS = "53";
+
+    // The length of receivers and receiverAmounts must be the same
+    string internal EC_54_INVALID_RECEIVERS_AND_AMOUNTS = "54";
+
+    // Payer account is the zero address
+    string internal EC_55_PAYER_ZERO_ADDRESS = "55";
+
+    // A payer exist more than once in payers input argument
+    string internal EC_56_PAYER_DUPLICATE = "56";
+
+    // Receiver account is the zero address
+    string internal EC_57_RECEIVER_ZERO_ADDRESS = "57";
+
+    // A receiver exist more than once in receivers input argument
+    string internal EC_58_RECEIVER_DUPLICATE = "58";
+
+    // "sum(payerAmounts) != sum(receiverAmounts)"
+    string internal EC_59_TOTAL_SUM_NOT_EQUAL = "59";
+
+    // The proposal is already completed
+    string internal EC_5A_PROPOSAL_COMPLETED = "5A";
+
+    // The sender or receiver address is invalid
+    string internal EC_5B_SENDER_RECEIVER_INVALID = "5B";
+
+    // The sender/receiver address is already paid/withdraw
+    string internal EC_5C_SENDER_RECEIVER_ALREDY_PAID_WITHDRAW = "5C";
+
+    // Invalid amount sent by this address
+    string internal EC_5D_INVALID_AMOUNT = "5D";
+
+    // Sender/payer has not paid yet
+    string internal EC_5E_SENDER_PAYER_NOT_YET_PAID = "5E";
+
+    // msg.sender has withdraw the amounts
+    string internal EC_5F_RECEIVER_ALREADY_WITHDRAW = "5F";
+
+    // The proposal is not yet markAsCompleted
+    string internal EC_60_PROPOSAL_NOT_COMPLETE = "60";
+
     // SplitProposal contains payers, the amounts that are required to be paid by each payer,
     // receivers, and amounts that will be paid to each receiver.
     struct SplitProposal {
@@ -96,7 +146,7 @@ contract Split {
 
     // Whether the given proposalNumber is valid.
     modifier validProposalNumber(uint256 proposalNumber) {
-        require(validProposals[proposalNumber], "Invalid proposalNumber");
+        require(validProposals[proposalNumber], EC_50_INVALID_PROPOSAL_NUMBER);
         _;
     }
 
@@ -119,15 +169,15 @@ contract Split {
         public
         returns (uint256)
     {
-        require(payers.length != 0, "No payer address is provided");
-        require(receivers.length != 0, "No receiver address is provided");
+        require(payers.length != 0, EC_51_NO_PAYER);
+        require(receivers.length != 0, EC_52_NO_RECEIVER);
         require(
             payers.length == payerAmounts.length,
-            "The length of payers and payerAmounts must be the same"
+            EC_53_INVALID_PAYERS_AND_AMOUNTS
         );
         require(
             receivers.length == receiverAmounts.length,
-            "The length of receivers and receiverAmounts must be the same"
+            EC_54_INVALID_RECEIVERS_AND_AMOUNTS
         );
         require(validProposals[nextProposalIndex] == false, "nextProposalIndex is already used");
 
@@ -140,10 +190,10 @@ contract Split {
 
         uint256 totalPayerAmounts;
         for (uint256 i = 0; i < payers.length; i++) {
-            require(payers[i] != address(0), "payer account is the zero address");
+            require(payers[i] != address(0), EC_55_PAYER_ZERO_ADDRESS);
             require(
                 proposal.isPayer[payers[i]] == false,
-                "A payer exist more than once in payers input argument"
+                EC_56_PAYER_DUPLICATE
             );
             proposal.isPayer[payers[i]] = true;
             proposal.payerAmountsByAddress[payers[i]] = payerAmounts[i];
@@ -152,10 +202,10 @@ contract Split {
 
         uint256 totalReceiverAmounts;
         for (uint256 i = 0; i < receivers.length; i++) {
-            require(receivers[i] != address(0), "receiver account is the zero address");
+            require(receivers[i] != address(0), EC_57_RECEIVER_ZERO_ADDRESS);
             require(
                 proposal.isReceiver[receivers[i]] == false,
-                "A receiver exist more than once in receivers input argument"
+                EC_58_RECEIVER_DUPLICATE
             );
             proposal.isReceiver[receivers[i]] = true;
             proposal.receiverAmountsByAddress[receivers[i]] = receiverAmounts[i];
@@ -163,7 +213,7 @@ contract Split {
         }
         require(
             totalPayerAmounts == totalReceiverAmounts,
-            "sum(payerAmounts) != sum(receiverAmounts)"
+            EC_59_TOTAL_SUM_NOT_EQUAL
         );
         proposal.totalAmount = totalPayerAmounts;
         return nextProposalIndex++;
@@ -178,12 +228,15 @@ contract Split {
      */
     function sendAmount(uint256 proposalNumber) public payable validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
-        require(proposal.completed == false, "The proposal is already completed");
-        require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
-        require(proposal.paidByAddress[msg.sender] == false, "Sender has already paid");
+        require(proposal.completed == false, EC_5A_PROPOSAL_COMPLETED);
+        require(proposal.isPayer[msg.sender], EC_5B_SENDER_RECEIVER_INVALID);
+        require(
+            proposal.paidByAddress[msg.sender] == false,
+            EC_5C_SENDER_RECEIVER_ALREDY_PAID_WITHDRAW
+        );
         require(
             msg.value == proposal.payerAmountsByAddress[msg.sender],
-            "Invalid amount that is required for this address"
+            EC_5D_INVALID_AMOUNT
         );
 
         proposals[proposalNumber].paidByAddress[msg.sender] = true;
@@ -198,9 +251,9 @@ contract Split {
      */
     function withdrawAmount(uint256 proposalNumber) public validProposalNumber(proposalNumber) {
         SplitProposal storage proposal = proposals[proposalNumber];
-        require(proposal.completed == false, "The proposal is already completed");
-        require(proposal.isPayer[msg.sender], "Sender is invalid for the given proposalNumber");
-        require(proposal.paidByAddress[msg.sender], "Sender has not paid yet");
+        require(proposal.completed == false, EC_5A_PROPOSAL_COMPLETED);
+        require(proposal.isPayer[msg.sender], EC_5B_SENDER_RECEIVER_INVALID);
+        require(proposal.paidByAddress[msg.sender], EC_5E_SENDER_PAYER_NOT_YET_PAID);
 
         // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         proposals[proposalNumber].paidByAddress[msg.sender] = false;
@@ -218,13 +271,13 @@ contract Split {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(
             proposal.isReceiver[msg.sender],
-            "msg.sender is not a valid receiver for the given proposal"
+            EC_5B_SENDER_RECEIVER_INVALID
         );
-        require(proposal.completed == false, "The proposal is already completed");
+        require(proposal.completed == false, EC_5A_PROPOSAL_COMPLETED);
         for (uint256 i = 0; i < proposal.payers.length; i++) {
             require(
                 proposal.paidByAddress[proposal.payers[i]],
-                "Some payers have not made payment yet."
+                EC_5E_SENDER_PAYER_NOT_YET_PAID
             );
         }
 
@@ -241,12 +294,12 @@ contract Split {
         SplitProposal storage proposal = proposals[proposalNumber];
         require(
             proposal.isReceiver[msg.sender],
-            "msg.sender is not a valid receiver for the given proposal"
+            EC_5B_SENDER_RECEIVER_INVALID
         );
-        require(proposal.completed, "The proposal is not yet markAsCompleted");
+        require(proposal.completed, EC_60_PROPOSAL_NOT_COMPLETE);
         require(
             proposal.withdrawByAddress[msg.sender] == false,
-            "msg.sender has withdraw the amounts"
+            EC_5F_RECEIVER_ALREADY_WITHDRAW
         );
 
         // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern

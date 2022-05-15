@@ -537,7 +537,7 @@ describe('Split.receiverWithdrawAmount', () => {
       split
         .connect(receiverSigner)
         .receiverWithdrawAmount(result.proposalNumber)
-    ).to.be.revertedWith('msg.sender has withdraw the amounts');
+    ).to.be.reverted;
   });
 });
 
