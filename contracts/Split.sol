@@ -2,7 +2,6 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
@@ -18,7 +17,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
  * withdrawAmount() to withdraw the amount that payer has already paid for the SplitProposal.
  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
  */
-contract Split is Ownable {
+contract Split {
 
     // SplitProposal contains payers, the amounts that are required to be paid by each payer,
     // receivers, and amounts that will be paid to each receiver.
@@ -95,27 +94,13 @@ contract Split is Ownable {
     // The next proposal index that is going to be used in createSplitProposal()
     uint256 public nextProposalIndex;
 
-    // Any tips that can be claimed by the owner.
-    uint256 public claimableTips;
-
     // Whether the given proposalNumber is valid.
     modifier validProposalNumber(uint256 proposalNumber) {
         require(validProposals[proposalNumber], "Invalid proposalNumber");
         _;
     }
 
-    constructor() Ownable() {
-    }
-
-    // Function to receive Ether.
-    receive() external payable {
-        claimableTips += msg.value;
-    }
-
-    // Function to receive Ether.
-    fallback() external payable {
-        claimableTips += msg.value;
-    }
+    constructor() { }
 
     /**
      * @dev Creates a SplitProposal
@@ -267,18 +252,6 @@ contract Split is Ownable {
         // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
         proposal.withdrawByAddress[msg.sender] = true;
         Address.sendValue(payable(msg.sender), proposal.receiverAmountsByAddress[msg.sender]);
-    }
-
-    /**
-     * @dev Owner calls this method to withdraw tips given by the payers.
-     */
-    function withdrawTips() public onlyOwner {
-        require(claimableTips != 0, "No tips for now");
-
-        // https://docs.soliditylang.org/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern
-        uint256 toBeClaimedTips = claimableTips;
-        claimableTips = 0;
-        Address.sendValue(payable(msg.sender), toBeClaimedTips);
     }
 
     /**
