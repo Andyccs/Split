@@ -578,6 +578,33 @@ describe('Split.withdrawTips', () => {
     expect(await split.connect(ownerSigner).claimableTips()).to.equal(0);
   });
 
+  it('Should withdrawTips successfully if tips sent using fallback()', async () => {
+    const tipsAmount = ethers.BigNumber.from(999);
+    expect(
+      await payerSigner.sendTransaction({
+        to: split.address,
+        value: tipsAmount,
+        data: ethers.BigNumber.from("100").toHexString(),
+      })
+    ).to.changeEtherBalances(
+      [ownerSigner, payerSigner, receiverSigner, split],
+      [0, -tipsAmount, 0, tipsAmount]
+    );
+
+    expect(await split.connect(ownerSigner).claimableTips()).to.equal(
+      tipsAmount
+    );
+
+    expect(
+      await split.connect(ownerSigner).withdrawTips()
+    ).to.changeEtherBalances(
+      [ownerSigner, payerSigner, receiverSigner, split],
+      [tipsAmount, 0, 0, -tipsAmount]
+    );
+
+    expect(await split.connect(ownerSigner).claimableTips()).to.equal(0);
+  });
+
   it('Should not withdrawTips if not owner', async () => {
     const tipsAmount = INVALID_PROPOSAL_NUMBER;
     expect(
@@ -620,6 +647,14 @@ describe('Split Getters', () => {
     );
   });
 
+  it('Should isValidProposals return true', async () => {
+    expect(await split.isValidProposals(result.proposalNumber)).to.be.true;
+  });
+
+  it('Should isValidProposals return false', async () => {
+    expect(await split.isValidProposals(INVALID_PROPOSAL_NUMBER)).to.be.false;
+  });
+
   it('Should getPayers successfully', async () => {
     expect(await split.getPayers(result.proposalNumber)).to.be.eql([
       payerSigner.address,
@@ -630,6 +665,16 @@ describe('Split Getters', () => {
     await expect(split.getPayers(INVALID_PROPOSAL_NUMBER)).to.be.reverted;
   });
 
+  it('Should getReceivers successfully', async () => {
+    expect(await split.getReceivers(result.proposalNumber)).to.be.eql([
+      receiverSigner.address,
+    ]);
+  });
+
+  it('Should not getReceivers if invalid proposalNumber', async () => {
+    await expect(split.getReceivers(INVALID_PROPOSAL_NUMBER)).to.be.reverted;
+  });
+
   it('Should getAmounts successfully', async () => {
     expect(await split.getAmounts(result.proposalNumber)).to.be.eql([
       ethers.BigNumber.from(result.amount),
@@ -638,6 +683,16 @@ describe('Split Getters', () => {
 
   it('Should not getAmounts if invalid proposalNumber', async () => {
     expect(split.getAmounts(INVALID_PROPOSAL_NUMBER)).to.be.reverted;
+  });
+
+  it('Should getReceiverAmounts successfully', async () => {
+    expect(await split.getReceiverAmounts(result.proposalNumber)).to.be.eql([
+      ethers.BigNumber.from(result.amount),
+    ]);
+  });
+
+  it('Should not getReceiverAmounts if invalid proposalNumber', async () => {
+    expect(split.getReceiverAmounts(INVALID_PROPOSAL_NUMBER)).to.be.reverted;
   });
 
   it('Should getAmountForPayer successfully', async () => {
@@ -658,12 +713,36 @@ describe('Split Getters', () => {
     ).to.be.reverted;
   });
 
+  it('Should getAmountForReceiver successfully', async () => {
+    expect(
+      await split.getAmountForReceiver(
+        result.proposalNumber,
+        receiverSigner.address
+      )
+    ).to.be.equal(result.amount);
+  });
+
+  it('Should not getAmountForReceiver if invalid proposalNumber', async () => {
+    await expect(
+      split.getAmountForReceiver(
+        INVALID_PROPOSAL_NUMBER,
+        receiverSigner.address
+      )
+    ).to.be.reverted;
+  });
+
+  it('Should not getAmountForReceiver if invalid payer', async () => {
+    await expect(
+      split.getAmountForReceiver(result.proposalNumber, payerSigner.address)
+    ).to.be.reverted;
+  });
+
   it('Should return true for isPayer', async () => {
     expect(await split.isPayer(result.proposalNumber, payerSigner.address)).to
       .be.true;
   });
 
-  it('Should return false if address is not payer', async () => {
+  it('Should return false for isPayer if address is not payer', async () => {
     expect(await split.isPayer(result.proposalNumber, receiverSigner.address))
       .to.be.false;
   });
@@ -671,6 +750,23 @@ describe('Split Getters', () => {
   it('Should throw for isPayer if invalid proposalNumber', async () => {
     await expect(split.isPayer(INVALID_PROPOSAL_NUMBER, payerSigner.address)).to
       .be.reverted;
+  });
+
+  it('Should return true for isReceiver', async () => {
+    expect(
+      await split.isReceiver(result.proposalNumber, receiverSigner.address)
+    ).to.be.true;
+  });
+
+  it('Should return false for isReceiver if address is not receiver', async () => {
+    expect(await split.isReceiver(result.proposalNumber, payerSigner.address))
+      .to.be.false;
+  });
+
+  it('Should throw for isReceiver if invalid proposalNumber', async () => {
+    await expect(
+      split.isReceiver(INVALID_PROPOSAL_NUMBER, receiverSigner.address)
+    ).to.be.reverted;
   });
 });
 
@@ -715,6 +811,69 @@ describe('Split.isPaidForPayer', () => {
   it('Should throw for isPaidForPayer if invalid proposalNumber', async () => {
     await expect(
       split.isPaidForPayer(INVALID_PROPOSAL_NUMBER, payerSigner.address)
+    ).to.be.reverted;
+  });
+});
+
+describe('Split.isWithdrawnForReceiver', () => {
+  let split: Split;
+  let payerSigner: SignerWithAddress;
+  let receiverSigner: SignerWithAddress;
+  let result: CreateSplitProposalResult;
+
+  beforeEach(async () => {
+    split = await createSplitContract();
+    let _owner: SignerWithAddress;
+    [_owner, payerSigner, receiverSigner] = await ethers.getSigners();
+
+    result = await createSplitProposal(
+      split,
+      [payerSigner.address],
+      [receiverSigner.address]
+    );
+    expect(
+      await split
+        .connect(payerSigner)
+        .sendAmount(result.proposalNumber, {value: result.amount})
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [-result.amount, 0, result.amount]
+    );
+
+    await split.connect(receiverSigner).markAsCompleted(result.proposalNumber);
+    expect(await split.isCompleted(result.proposalNumber)).to.be.true;
+
+    expect(
+      await split
+        .connect(receiverSigner)
+        .receiverWithdrawAmount(result.proposalNumber)
+    ).to.changeEtherBalances(
+      [payerSigner, receiverSigner, split],
+      [0, result.amount, -result.amount]
+    );
+  });
+
+  it('Should return true for isWithdrawnForReceiver', async () => {
+    expect(
+      await split.isWithdrawnForReceiver(
+        result.proposalNumber,
+        receiverSigner.address
+      )
+    ).to.be.true;
+  });
+
+  it('Should throw for isWithdrawnForReceiver if address is not receiver', async () => {
+    await expect(
+      split.isWithdrawnForReceiver(result.proposalNumber, payerSigner.address)
+    ).to.be.reverted;
+  });
+
+  it('Should throw for isWithdrawnForReceiver if invalid proposalNumber', async () => {
+    await expect(
+      split.isWithdrawnForReceiver(
+        INVALID_PROPOSAL_NUMBER,
+        receiverSigner.address
+      )
     ).to.be.reverted;
   });
 });

@@ -327,7 +327,7 @@ contract Split is Ownable {
      * @param proposalNumber The proposal number obtained by SplitProposal creator when creating a
      * new SplitProposal using createSplitProposal.
      */
-    function getReceiver(
+    function getReceivers(
         uint256 proposalNumber
     )
         public
