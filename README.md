@@ -23,6 +23,18 @@ This smart contract is very similar to [PaymentSplitter](https://docs.openzeppel
 - Charlie calls `PaymentSplitter.release()` method to receive 1 ETH from the smart contract
 - David calls `PaymentSplitter.release()` method to receive 4 ETH from the smart contract
 
+There are many differences between the PaymentSplitter by OpenZepplin and Split Contract:
+
+- PaymentSplitter contract can only have one Split Proposal. This means that everytime when a split/escrow account is required, a new PaymentSplitter contract needs to be deployed. In contrast, a Split Contract can contain multiple Split Proposal, so you don't need to deploy a new contract to facilitate a new payment that needs escrow account.
+- PaymentSplitter contract does not have access control for payers, so anyone can make payment to the contract. In contrast, a Split Proposal in Split Contract contains a predetermine list of payers and only those payers can make payment to the Split Proposal.
+- Once payers made payments to PaymentSplitter contract, it is not possible to withdraw the funds. In contrast, payers can withdraw funds that they paid to Split Contract as long as the Split Proposal is not yet marked as completed by receiver.
+
+## Motivation for Split Contract
+
+The idea of an [escrow](https://en.wikipedia.org/wiki/Escrow) account is important to facilitate various transactions, for example, in a real estate transaction, an escrow account is usually setup so that Buyer of a real estate deposits their down payment for the house to the escrow account, mortage lender deposits the rest of the required amounts to the escrow account, before the real estate transaction is considered completed and funds are disburse to the seller of the real estate, the seller's mortgage lender, buyer's real estate agent and seller's real estate agent.
+
+In the real world, escrow account is usually set up by a third party, trusted entity. The goal of Split Contract is to be the escrow account **to facilitate payments involving multiple parties in web3**.
+
 # Development
 
 ## Basic Sample Hardhat Project
