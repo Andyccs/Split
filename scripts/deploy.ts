@@ -12,21 +12,15 @@ async function main() {
   // If this script is run directly using `node` you may want to call compile
   // manually to make sure everything is compiled
   // await hre.run('compile');
-
-  // We get the contract to deploy
-  const Greeter = await ethers.getContractFactory('Greeter');
-  const greeter = await Greeter.deploy('Hello, Hardhat!');
-
-  await greeter.deployed();
-
-  console.log('Greeter deployed to:', greeter.address);
+  const splitContract = await ethers.getContractFactory('Split');
+  const deployedSplitContract = await splitContract.deploy();
+  await deployedSplitContract.deployed();
+  console.log('Split Contract Address:', deployedSplitContract.address);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main()
   .then(() => {})
   .catch(error => {
     console.error(error);
-    throw new Error('Something bad happened!');
+    throw new Error('Not able to deploy contract!');
   });

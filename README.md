@@ -49,7 +49,15 @@ npx hardhat coverage
 
 # To run linter
 npx gts lint
+
+# To deploy to Hardhat network
+npx hardhat run scripts/deploy.ts
+
+# To deploy to Rinkeby network
+npx hardhat run scripts/deploy.ts --network rinkeby
 ```
+
+Deployed Smart Contract Address in Rinkeby: [0x51B0D003dd0Da1ff27aFBA594f4567076B66e409](https://rinkeby.etherscan.io/address/0x51B0D003dd0Da1ff27aFBA594f4567076B66e409)
 
 ## Basic Sample Hardhat Project
 
@@ -61,6 +69,5 @@ Try running some of the following tasks:
 npx hardhat accounts
 npx hardhat clean
 npx hardhat node
-node scripts/sample-script.js
 npx hardhat help
 ```

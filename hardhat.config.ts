@@ -3,6 +3,12 @@ import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
 import 'solidity-coverage';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const ALCHEMY_API_KEY_URL = process.env.ALCHEMY_API_KEY_URL;
+const RINKEBY_PRIVATE_KEY = process.env.RINKEBY_PRIVATE_KEY;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -28,6 +34,12 @@ export default {
         enabled: true,
         runs: 200,
       },
+    },
+  },
+  networks: {
+    rinkeby: {
+      url: ALCHEMY_API_KEY_URL,
+      accounts: [RINKEBY_PRIVATE_KEY],
     },
   },
 };
