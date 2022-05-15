@@ -37,6 +37,20 @@ In the real world, escrow account is usually set up by a third party, trusted en
 
 # Development
 
+```shell
+# To compile the project
+npx hardhat compile
+
+# To run unit tests
+npx hardhat test
+
+# To generate coverage report
+npx hardhat coverage
+
+# To run linter
+npx gts lint
+```
+
 ## Basic Sample Hardhat Project
 
 This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
@@ -45,13 +59,8 @@ Try running some of the following tasks:
 
 ```shell
 npx hardhat accounts
-npx hardhat compile
 npx hardhat clean
-npx hardhat test
-npx hardhat coverage
 npx hardhat node
 node scripts/sample-script.js
 npx hardhat help
-
-npx gts lint
 ```
